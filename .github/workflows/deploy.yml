@@ -57,11 +57,10 @@ jobs:
         run: |
           {
             echo "HB_BASE_URL=https://hirebridge.dev"
-            echo "HB_LISTEN=:8080"
+            echo "HB_LISTEN=127.0.0.1:8080"
             echo "HB_DB_PATH=/opt/hirebridge/data/hirebridge.db"
             echo "HB_VEC0_PATH=/app/ext/vec0.so"
             echo "HB_EMBED_DIM=384"
-            echo "HB_TLS_DOMAIN=hirebridge.dev"
             echo "HB_MAILER_PROVIDER=smtp"
             echo "HB_SMTP_HOST=smtp.purelymail.com"
             echo "HB_SMTP_PORT=587"
@@ -92,8 +91,8 @@ jobs:
           SSH_HOST: ${{ secrets.DEPLOY_HOST }}
           SSH_USER: ${{ secrets.DEPLOY_USER }}
         run: |
-          # HTTPS must be probed with the real hostname as SNI — autocert has no
-          # cert for "localhost" (that's a TLS handshake error, curl exit 35).
-          # --resolve pins the name to loopback so the probe stays on-box.
+          # The app listens on loopback; nginx terminates TLS (certbot) in front.
+          # HTTPS is probed with the real hostname as SNI, pinned to loopback
+          # with --resolve so the probe stays on-box.
           ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 $SSH_USER@$SSH_HOST \
-            "sleep 2 && curl -sf http://localhost:80/healthz && echo ' HTTP' && curl -sf --resolve hirebridge.dev:443:127.0.0.1 https://hirebridge.dev/healthz && echo ' HTTPS'"
+            "sleep 2 && curl -sf http://127.0.0.1:8080/healthz && echo ' app' && curl -sf --resolve hirebridge.dev:443:127.0.0.1 https://hirebridge.dev/healthz && echo ' HTTPS (nginx)'"
